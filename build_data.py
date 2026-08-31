@@ -86,7 +86,7 @@ MULTI = {
     'child_games': ([(f'C3_1{i}', v) for i, v in [(1, 'cod'), (2, 'cs'), (3, 'gta'), (4, 'minecraft'), (5, 'dota'), (6, 'genshin'), (7, 'nfs'), (8, 'pubg'), (9, 'sims'), (10, 'fifa')]]),
     'child_devices': ([('C8_1', 'pc'), ('C8_2', 'console'), ('C8_3', 'mobile'), ('C8_4', 'handheld')]),
     'hobbies':   ([(f'S5_{i}', v) for i, v in [(1, 'games'), (2, 'photo_video'), (3, 'digital_art'), (4, 'blog_podcast'), (5, 'programming'), (6, '3d'), (7, 'online_courses'), (98, 'other'), (97, 'none')]]),
-    'leisure':   ([(f'S4_{i}', v) for i, v in [(1, 'videogames'), (2, 'boardgames'), (3, 'tv_movies'), (4, 'cinema_theater'), (5, 'books'), (6, 'sport'), (7, 'crafts'), (8, 'internet'), (9, 'learning'), (10, 'travel'), (11, 'music_audiobooks')]]),
+    'leisure':   ([(f'S4_{i}', v) for i, v in [(1, 'videogames'), (2, 'boardgames'), (3, 'tv_movies'), (4, 'cinema_theater'), (5, 'books'), (6, 'sport'), (7, 'crafts'), (8, 'internet'), (9, 'learning'), (10, 'travel'), (11, 'music_audiobooks')]], {1: 'often', 2: 'sometimes', 3: 'rarely', 4: 'never'}),
 }
 
 # L1 attitudes: 1 agree, 2 disagree, 99 na
@@ -119,15 +119,26 @@ for key, (col, mapping) in SINGLE.items():
     records[key] = out
 
 # multis: store list of tags per respondent
-for key, (cols) in MULTI.items():
+# 'leisure' is a frequency scale (often/sometimes/rarely/never), not a multi-select:
+# store as single dict {tag: freq_code}
+for key, spec in MULTI.items():
+    cols, freq_map = spec if isinstance(spec, tuple) and len(spec) == 2 and isinstance(spec[1], dict) else (spec, None)
     out = []
     for i in range(n):
-        tags = []
-        for col, tag in cols:
-            v = df[col].iloc[i]
-            if pd.notna(v):
-                tags.append(tag)
-        out.append(tags)
+        if freq_map is not None:
+            d = {}
+            for col, tag in cols:
+                v = df[col].iloc[i]
+                if pd.notna(v):
+                    d[tag] = freq_map.get(int(v))
+            out.append(d)
+        else:
+            tags = []
+            for col, tag in cols:
+                v = df[col].iloc[i]
+                if pd.notna(v):
+                    tags.append(tag)
+            out.append(tags)
     records[key] = out
 
 # L1 / K2 attitudes: store 'a' (agree) / 'd' (disagree) / None

@@ -614,7 +614,33 @@ function renderCharts(){
   const siRows=distSingle('selfid',IDX,GAMERIDX.filter(i=>R.selfid[i]));
   pieOrBar('ch-selfid',siRows); setBase('selfid',BASES.gamers());
   const leiTags=Object.keys(mdicts.leisure);
-  hbar('ch-leisure',distMulti('leisure',leiTags,'leisure',IDX,IDX)); setBase('leisure',BASES.answered());
+  // leisure is a frequency scale — stacked bar: often/sometimes/rarely/never
+  const leiRows=[];
+  for(const t of leiTags){
+    const cnt={often:0,sometimes:0,rarely:0,never:0};
+    let tot=0;
+    for(const i of IDX){
+      const d=R.leisure[i];
+      if(!d||d[t]==null)continue;
+      const w=W(i);tot+=w;cnt[d[t]]+=w;
+    }
+    if(tot>0)leiRows.push({name:mlab('leisure',t),code:t,pct:tot?cnt.often/tot*100:0,sometimes:cnt.sometimes/tot*100,rarely:cnt.rarely/tot*100,never:cnt.never/tot*100,n:tot});
+  }
+  leiRows.sort((a,b)=>b.pct-a.pct);
+  const leiFreq=(key)=>({
+    grid:{left:8,right:10,top:30,bottom:44,containLabel:true},
+    legend:{top:0,textStyle:{color:'#8b96a5',fontSize:12}},
+    tooltip:{...tooltipStyle,formatter:ps=>{const n=ps[0].name;const r=leiRows.find(x=>x.name===n);return `${n}<br/>${ps.map(p=>`${p.marker}${p.seriesName}: <b>${p.value}%</b>`).join('<br/>')}`}},
+    xAxis:{type:'category',data:leiRows.map(r=>r.name),axisLabel:{color:'#c6cfdb',fontSize:10.5,interval:0,rotate:38},axisLine:{lineStyle:{color:'#2b3a55'}}},
+    yAxis:{type:'value',axisLabel:{...baseFont,formatter:'{value}%'},splitLine:{lineStyle:{color:'#222b38'}}},
+    series:[
+      {name:LANG==='ru'?'Часто':'Often',type:'bar',stack:'f',data:leiRows.map(r=>+r.pct.toFixed(1)),itemStyle:{color:'#4f8cff'},barMaxWidth:26},
+      {name:LANG==='ru'?'Иногда':'Sometimes',type:'bar',stack:'f',data:leiRows.map(r=>+r.sometimes.toFixed(1)),itemStyle:{color:'#22c55e'},barMaxWidth:26},
+      {name:LANG==='ru'?'Редко':'Rarely',type:'bar',stack:'f',data:leiRows.map(r=>+r.rarely.toFixed(1)),itemStyle:{color:'#fbbf24'},barMaxWidth:26},
+      {name:LANG==='ru'?'Никогда':'Never',type:'bar',stack:'f',data:leiRows.map(r=>+r.never.toFixed(1)),itemStyle:{color:'#33415c'},barMaxWidth:26},
+    ]
+  });
+  regChart('ch-leisure',leiFreq); setBase('leisure',BASES.answered());
   const vidRows=distSingle('videos',IDX,GAMERIDX.filter(i=>R.videos[i]));
   pieOrBar('ch-video',vidRows); setBase('video',BASES.gamers());
 
@@ -854,10 +880,10 @@ function renderCorr(){
   }
   const samp=pts.length>4000?pts.filter(()=>Math.random()<4000/pts.length):pts;
   regChart('ch-corr',()=>({
-    grid:{left:60,right:30,top:60,bottom:50},
+    grid:{left:70,right:30,top:60,bottom:56},
     tooltip:{...tooltipStyle,formatter:p=>`x: ${p.value[0].toFixed(2)}<br/>y: ${p.value[1].toFixed(2)}`},
-    xAxis:{min:Math.min(...samp.map(p=>p[0]))-0.2,max:Math.max(...samp.map(p=>p[0]))+0.2,type:'value',name:LANG==='ru'?'X':'X',nameLocation:'middle',nameGap:30,nameTextStyle:{color:'#8b96a5'},axisLabel:{...baseFont},splitLine:{lineStyle:{color:'#222b38'}}},
-    yAxis:{min:Math.min(...samp.map(p=>p[1]))-0.2,max:Math.max(...samp.map(p=>p[1]))+0.2,type:'value',name:LANG==='ru'?'Y':'Y',nameTextStyle:{color:'#8b96a5'},axisLabel:{...baseFont},splitLine:{lineStyle:{color:'#222b38'}}},
+    xAxis:{min:Math.floor(Math.min(...samp.map(p=>p[0]))-0.2),max:Math.ceil(Math.max(...samp.map(p=>p[0]))+0.2),type:'value',name:(LANG==='ru'?document.getElementById('corrA').selectedOptions[0].textContent:document.getElementById('corrA').selectedOptions[0].textContent),nameLocation:'middle',nameGap:36,nameTextStyle:{color:'#8b96a5',fontSize:12,fontWeight:600},axisLabel:{...baseFont,formatter:v=>+v.toFixed(1)},splitLine:{lineStyle:{color:'#222b38'}}},
+    yAxis:{min:Math.floor(Math.min(...samp.map(p=>p[1]))-0.2),max:Math.ceil(Math.max(...samp.map(p=>p[1]))+0.2),type:'value',name:(document.getElementById('corrB').selectedOptions[0].textContent),nameTextStyle:{color:'#8b96a5',fontSize:12,fontWeight:600,align:'right'},axisLabel:{...baseFont,formatter:v=>+v.toFixed(1)},splitLine:{lineStyle:{color:'#222b38'}}},
     graphic:[{
       type:'text',left:'center',top:8,
       style:{text:`${T('corrCoef')}: ${r==null?'—':(r>=0?'+':'')+r.toFixed(3)}   ·   ${T('corrN')}: ${n.toLocaleString()}`,fontSize:19,fontWeight:'bold',
