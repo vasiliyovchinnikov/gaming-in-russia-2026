@@ -43,7 +43,7 @@ nav a:hover{color:var(--text);background:var(--chip);text-decoration:none}
 .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
 .kpi .v{font-size:26px;font-weight:800}
 .kpi .l{color:var(--muted);font-size:12.5px;margin-top:3px}
-.kpi .n{font-size:11px;color:#5b6activity575;margin-top:6px}
+.kpi .n{font-size:11px;color:#5b6575;margin-top:6px}
 
 /* filters */
 .filters{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:14px 0 8px;position:sticky;top:57px;z-index:40}
@@ -78,6 +78,8 @@ h2 .num{color:var(--accent);font-size:14px;font-weight:700;background:var(--chip
 
 /* correlation section */
 .corr-note{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.corrresult{margin:14px 0 4px;font-size:19px;font-weight:700;text-align:center;line-height:1.45;overflow-wrap:anywhere}
+.corrresult .sub{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
 .attrow{display:grid;grid-template-columns:minmax(230px,1.4fr) minmax(120px,1fr);gap:10px;align-items:center;padding:8px 12px;border-radius:8px;cursor:pointer}
 .attrow:hover{background:var(--panel2)}
 .attrow .nm{font-size:13.5px}
@@ -96,9 +98,20 @@ footer a{font-weight:600}
 [lang-switch-hidden]{display:none}
 .hidden{display:none}
 @media(max-width:760px){
-  .g2{grid-template-columns:1fr}
+  .g2,.g3{grid-template-columns:1fr}
   .hero h1{font-size:24px}
   .fbase{width:100%;text-align:left}
+  .filters{position:static}
+  .attrow{grid-template-columns:1fr;gap:3px;padding:8px 10px}
+  .attrow .bar{height:20px}
+  .card{padding:14px 12px 6px}
+  .chart{height:300px}
+  .chart.tall{height:380px}
+  .chart.small{height:250px}
+  .fgroup select{min-width:0;flex:1}
+  .fgroup{flex:1 1 40%}
+  h2{font-size:18px}
+  .kpi .v{font-size:22px}
 }
 </style>
 </head>
@@ -532,6 +545,7 @@ function buildSkeleton(){
         <div class="fgroup"><label>${T('corrPickA')}</label><select id="corrA"></select></div>
         <div class="fgroup"><label>${T('corrPickB')}</label><select id="corrB"></select></div>
       </div>
+      <div class="corrresult" id="corrResult"></div>
       <div class="chart tall" id="ch-corr"></div>
     </div>`);
 
@@ -871,6 +885,11 @@ function renderCorr(){
   const a=CORR_VARS[document.getElementById('corrA').value];
   const b=CORR_VARS[document.getElementById('corrB').value];
   const {r,n}=corr(a,b);
+  const cr=document.getElementById('corrResult');
+  if(cr){
+    const color=r==null?'#8b96a5':Math.abs(r)<0.1?'#8b96a5':(r>0?'#22c55e':'#4f8cff');
+    cr.innerHTML=`<div style="color:${color}">${T('corrCoef')}: ${r==null?'—':(r>=0?'+':'')+r.toFixed(3)}</div><div class="sub">${T('corrN')}: ${n.toLocaleString()}</div>`;
+  }
   // scatter with jitter for binary vars
   const pts=[];
   for(const i of IDX){
@@ -880,15 +899,10 @@ function renderCorr(){
   }
   const samp=pts.length>4000?pts.filter(()=>Math.random()<4000/pts.length):pts;
   regChart('ch-corr',()=>({
-    grid:{left:70,right:30,top:60,bottom:56},
+    grid:{left:70,right:30,top:30,bottom:56},
     tooltip:{...tooltipStyle,formatter:p=>`x: ${p.value[0].toFixed(2)}<br/>y: ${p.value[1].toFixed(2)}`},
     xAxis:{min:Math.floor(Math.min(...samp.map(p=>p[0]))-0.2),max:Math.ceil(Math.max(...samp.map(p=>p[0]))+0.2),type:'value',name:(LANG==='ru'?document.getElementById('corrA').selectedOptions[0].textContent:document.getElementById('corrA').selectedOptions[0].textContent),nameLocation:'middle',nameGap:36,nameTextStyle:{color:'#8b96a5',fontSize:12,fontWeight:600},axisLabel:{...baseFont,formatter:v=>+v.toFixed(1)},splitLine:{lineStyle:{color:'#222b38'}}},
     yAxis:{min:Math.floor(Math.min(...samp.map(p=>p[1]))-0.2),max:Math.ceil(Math.max(...samp.map(p=>p[1]))+0.2),type:'value',name:(document.getElementById('corrB').selectedOptions[0].textContent),nameTextStyle:{color:'#8b96a5',fontSize:12,fontWeight:600,align:'right'},axisLabel:{...baseFont,formatter:v=>+v.toFixed(1)},splitLine:{lineStyle:{color:'#222b38'}}},
-    graphic:[{
-      type:'text',left:'center',top:8,
-      style:{text:`${T('corrCoef')}: ${r==null?'—':(r>=0?'+':'')+r.toFixed(3)}   ·   ${T('corrN')}: ${n.toLocaleString()}`,fontSize:19,fontWeight:'bold',
-        fill:r==null?'#8b96a5':Math.abs(r)<0.1?'#8b96a5':(r>0?'#22c55e':'#4f8cff')}
-    }],
     series:[{type:'scatter',data:samp.map(p=>({value:[p[0],p[1]],symbolSize:4,itemStyle:{color:r>=0?'rgba(34,197,94,0.30)':'rgba(79,140,255,0.30)'}}))}]
   }));
 }
