@@ -460,7 +460,10 @@ const CHARTS={}; // id -> {el, chart, builder}
 function regChart(id,builder){
   const el=document.getElementById(id);
   if(!el)return;
-  if(!CHARTS[id]){CHARTS[id]={el,chart:echarts.init(el),builder};}
+  if(!CHARTS[id]||!CHARTS[id].el.isConnected){
+    if(CHARTS[id])CHARTS[id].chart.dispose();
+    CHARTS[id]={el,chart:echarts.init(el),builder};
+  }
   else CHARTS[id].builder=builder;
   const c=CHARTS[id].chart;
   c.clear();
