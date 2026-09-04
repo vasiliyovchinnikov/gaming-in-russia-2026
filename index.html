@@ -188,6 +188,10 @@ footer a{font-weight:600}
         <div class="sub" data-i18n="subtitle">Интерактивный дашборд социологического исследования</div>
       </div>
       <div class="langswitch">
+        <button id="btnCities" class="on" onclick="setSample('cities')" data-i18n="btnCities">Города</button>
+        <button id="btnRF" onclick="setSample('rf')" data-i18n="btnRF">Вся Россия</button>
+      </div>
+      <div class="langswitch">
         <button id="btnRu" class="on" onclick="setLang('ru')">Русский</button>
         <button id="btnEn" onclick="setLang('en')">English</button>
       </div>
@@ -245,8 +249,12 @@ const I18N = {
     lead:'Социологическое исследование РВИ × НАФИ × ИФСИ. Все цифры на этой странице пересчитываются в вашем браузере из микроданных опроса — меняйте фильтры и наблюдайте, как меняются распределения и корреляции.',
     fSex:'Пол', fAge:'Возраст', fCity:'Город-миллионник', fFO:'Округ', fGamer:'Игровой статус', fAll:'Все', fReset:'Сбросить',
     optGamer:'Игроки', optNonGamer:'Не играют',
-    base:'База: <b>%n</b> респондентов (взвешенно %w)',
+    base:'База: <b>%n</b> респондентов (взвешенно %w · %s)',
     baseG:'из них игроки: <b>%g</b>',
+    smpCities:'города-миллионники',
+    smpRF:'репрезентация РФ',
+    btnCities:'Города',
+    btnRF:'Вся Россия',
     agree:'Согласны, %',
     kpiGamers:'играют в видеоигры (14+)',
     kpiDaily:'играют ежедневно',
@@ -280,7 +288,7 @@ const I18N = {
     attVsX:'Согласие с утверждением по группам',
     resonTitle:'Что вызвало наибольший резонанс',
     methodTitle:'Методология',
-    methodText:'Опрос проведён НАФИ по заказу РВИ и ИФСИ (полевой этап — октябрь 2025). Выборка 4 932 респондента от 14 лет, взвешивание по полу, возрасту, региону и размеру населённого пункта. Данный дашборд — неофициальный интерактивный инструмент поверх открытых микроданных; при цитировании ссылайтесь на официальное исследование.',
+    methodText:'Опрос проведён НАФИ по заказу РВИ и ИФСИ (полевой этап — октябрь 2025). Выборка 4 932 респондента от 14 лет. Доступны два взвешивания: «Города» — по полу, возрасту, региону и размеру населённого пункта, уклон в города-миллионники; «Вся Россия» — репрезентация населения РФ по полу, возрасту и округам (Росстат), максимальная погрешность 1,4%. Данный дашборд — неофициальный интерактивный инструмент поверх открытых микроданных; при цитировании ссылайтесь на официальное исследование.',
     agreeShort:'Согласны',
     ofGamers:'от игроков',
     ofNonGamers:'от неигроков',
@@ -316,8 +324,12 @@ const I18N = {
     lead:'A sociological study by RVI × NAFI × IFSI. Every figure on this page is recomputed in your browser from survey microdata — change the filters and watch distributions and correlations update.',
     fSex:'Sex', fAge:'Age', fCity:'Million+ city', fFO:'Federal district', fGamer:'Gaming status', fAll:'All', fReset:'Reset',
     optGamer:'Gamers', optNonGamer:'Non-gamers',
-    base:'Base: <b>%n</b> respondents (weighted %w)',
+    base:'Base: <b>%n</b> respondents (weighted %w · %s)',
     baseG:'gamers among them: <b>%g</b>',
+    smpCities:'million-plus cities',
+    smpRF:'RF-representative',
+    btnCities:'Cities',
+    btnRF:'All Russia',
     agree:'Agree, %',
     kpiGamers:'play video games (14+)',
     kpiDaily:'play daily',
@@ -351,7 +363,7 @@ const I18N = {
     attVsX:'Agreement by group',
     resonTitle:'Findings that made headlines',
     methodTitle:'Methodology',
-    methodText:'Survey by NAFI for RVI and IFSI (fieldwork October 2025). Sample: 4,932 respondents aged 14+, weighted by sex, age, region and locality size. This dashboard is an unofficial interactive tool built on open microdata — please cite the official study.',
+    methodText:'Survey by NAFI for RVI and IFSI (fieldwork October 2025). Sample: 4,932 respondents aged 14+. Two weighting schemes available: “Cities” — weighted by sex, age, region and locality size, tilt to million-plus cities; “All Russia” — representative of the RF population by sex, age and federal districts (Rosstat), max error 1.4%. This dashboard is an unofficial interactive tool built on open microdata — please cite the official study.',
     agreeShort:'Agree',
     ofGamers:'of gamers',
     ofNonGamers:'of non-gamers',
@@ -388,6 +400,8 @@ const T=k=>I18N[LANG][k]??k;
 
 /* ============ data ============ */
 const D=window.DATA, R=D.records, N=R._w.length;
+let SAMPLE='cities';
+const W=(i)=>SAMPLE==='rf'?R._wrf[i]:R._w[i];
 const dicts=D.dicts, mdicts=D.mdicts;
 
 /* i18n label helper: (langIndex) */
@@ -414,7 +428,6 @@ function applyFilters(){
 }
 
 /* weighted computations */
-const W=(i)=>R._w[i];
 function wsum(idx){let s=0;for(const i of idx)s+=W(i);return s;}
 function wshareOf(idx,pred){ // weighted % of idx matching pred
   let a=0,b=0;
@@ -635,7 +648,7 @@ function renderKPIs(){
   ];
   document.getElementById('kpis').innerHTML=kpis.map(([v,l])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   const gamersW=wshareOf(IDX,i=>R.gamer[i]==='gamer');
-  document.getElementById('fbase').innerHTML=T('base').replace('%n',IDX.length.toLocaleString()).replace('%w',Math.round(total).toLocaleString())+' · '+T('baseG').replace('%g',gamersW.toFixed(1)+'%');
+  document.getElementById('fbase').innerHTML=T('base').replace('%n',IDX.length.toLocaleString()).replace('%w',Math.round(total).toLocaleString()).replace('%s',SAMPLE==='rf'?T('smpRF'):T('smpCities'))+' · '+T('baseG').replace('%g',gamersW.toFixed(1)+'%');
 }
 
 /* ============ chart builders per section ============ */
@@ -997,6 +1010,14 @@ function bindFilters(){
     document.getElementById(id).addEventListener('change',e=>{F[key]=e.target.value;refresh();});
   });
 }
+/* ============ sample switch ============ */
+function setSample(s){
+  SAMPLE=(s==='rf')?'rf':'cities';
+  document.getElementById('btnCities').classList.toggle('on',SAMPLE==='cities');
+  document.getElementById('btnRF').classList.toggle('on',SAMPLE==='rf');
+  refresh();
+}
+
 function resetFilters(){
   F.sex=F.age=F.city=F.fo=F.gamer='';
   ['fSex','fAge','fCity','fFO','fGamer'].forEach(id=>document.getElementById(id).value='');

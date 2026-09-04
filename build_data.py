@@ -10,11 +10,17 @@ import numpy as np
 import pandas as pd
 
 SAV = '/opt/data/workspace/soc_research/data/Города_НАФИ_РВИ_Видеоигры.sav'
+SAV_RF = '/opt/data/workspace/soc_research/data/РФ_НАФИ_РВИ_Видеоигры (база).sav'
 OUT = '/opt/data/workspace/gaming2026/data.js'
 
 df, meta = pyreadstat.read_sav(SAV)
 vl = meta.variable_value_labels
 lab = meta.column_names_to_labels
+
+# всероссийский вектор весов из той же выборки (отличается только WEIGHT)
+df_rf, _ = pyreadstat.read_sav(SAV_RF)
+assert len(df_rf) == len(df)
+W_rf = df_rf['WEIGHT'].values.astype(float)
 
 W = df['WEIGHT'].values.astype(float)
 
@@ -238,6 +244,7 @@ records['ru_want'] = ru_tags(ru_pc13 + ru_mob13)
 
 # weights
 records['_w'] = [round(float(w), 4) for w in W]
+records['_wrf'] = [round(float(w), 4) for w in W_rf]
 
 # ---------------- dictionaries for the UI -------------------------------------
 # category label dictionaries ru/en
@@ -398,6 +405,7 @@ QUESTIONS = {
 META_INFO = {
     'n': n,
     'n_weighted': round(float(W.sum())),
+    'n_weighted_rf': round(float(W_rf.sum())),
     'gamers_weighted_pct': round(wshare(df['S4_DOP'] == 1), 1),
 }
 
