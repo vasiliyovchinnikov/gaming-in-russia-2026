@@ -482,6 +482,7 @@ function regChart(id,builder){
   c.clear();
   const opt=builder();
   if(opt)c.setOption(opt,true);
+  c.resize(); // контейнер мог сменить высоту под число строк (hbar)
 }
 
 const baseFont={color:'#8b96a5',fontSize:11.5};
@@ -490,6 +491,12 @@ const PALETTE=['#4f8cff','#22c55e','#fbbf24','#f472b6','#a78bfa','#34d399','#f87
 
 function hbar(id,rows,unit='%'){
   const data=rows.map(r=>({name:r.name,value:+r.pct.toFixed(1),n:r.n}));
+  // подстраиваем высоту контейнера под число полос, чтобы подписи оси не пропадали
+  const el=document.getElementById(id);
+  if(el&&data.length){
+    const need=data.length*30+70; // высота строки + запас под ось
+    el.style.height=Math.max(340, Math.min(900, need))+'px';
+  }
   regChart(id,()=>({
     grid:{left:8,right:44,top:6,bottom:6,containLabel:true},
     tooltip:{...tooltipStyle,formatter:p=>`${p.name}<br/><b>${p.value}${unit}</b> · n=${Math.round(p.data.n||0)}`},
